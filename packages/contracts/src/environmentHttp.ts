@@ -72,6 +72,12 @@ import {
   RelayEnvironmentMintResponse,
   RelayLinkProofRequest,
 } from "./relay.ts";
+import {
+  PrivateConnectEnvironment,
+  PrivateConnectRegister,
+  PrivateConnectSelection,
+  PrivateConnectBootstrap,
+} from "./privateConnect.ts";
 
 const OptionalBearerHeaders = Schema.Struct({
   authorization: Schema.optionalKey(Schema.String),
@@ -842,7 +848,62 @@ class EnvironmentWebhooksHttpApi extends HttpApiGroup.make("webhooks")
   .add(HttpApiEndpoint.patch("webhookPatch", WEBHOOK_PATH, webhookEndpoint))
   .add(HttpApiEndpoint.get("webhookGet", WEBHOOK_PATH, webhookEndpoint)) {}
 
+class PrivateConnectHttpApi extends HttpApiGroup.make("privateConnect")
+  .add(
+    HttpApiEndpoint.get("list", "/api/private-connect/environments", {
+      headers: OptionalBearerHeaders,
+      success: Schema.Array(PrivateConnectEnvironment),
+      error: [
+        EnvironmentHttpBadRequestError,
+        EnvironmentHttpForbiddenError,
+        EnvironmentHttpInternalServerError,
+        EnvironmentScopeRequiredError,
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("register", "/api/private-connect/environments", {
+      headers: OptionalBearerHeaders,
+      payload: PrivateConnectRegister,
+      success: PrivateConnectEnvironment,
+      error: [
+        EnvironmentHttpBadRequestError,
+        EnvironmentHttpForbiddenError,
+        EnvironmentHttpInternalServerError,
+        EnvironmentScopeRequiredError,
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("remove", "/api/private-connect/remove", {
+      headers: OptionalBearerHeaders,
+      payload: PrivateConnectSelection,
+      success: Schema.Struct({ removed: Schema.Boolean }),
+      error: [
+        EnvironmentHttpBadRequestError,
+        EnvironmentHttpForbiddenError,
+        EnvironmentHttpInternalServerError,
+        EnvironmentScopeRequiredError,
+      ],
+    }),
+  )
+  .add(
+    HttpApiEndpoint.post("bootstrap", "/api/private-connect/bootstrap", {
+      headers: OptionalBearerHeaders,
+      payload: PrivateConnectSelection,
+      success: PrivateConnectBootstrap,
+      error: [
+        EnvironmentHttpBadRequestError,
+        EnvironmentHttpForbiddenError,
+        EnvironmentHttpInternalServerError,
+        EnvironmentScopeRequiredError,
+      ],
+    }),
+  )
+  .middleware(EnvironmentAuthenticatedAuth) {}
+
 export class EnvironmentHttpApi extends HttpApi.make("environment")
+  .add(PrivateConnectHttpApi)
   .add(EnvironmentMetadataHttpApi)
   .add(EnvironmentAuthHttpApi)
   .add(EnvironmentMcpOAuthHttpApi)

@@ -1,4 +1,5 @@
 import { SessionPermissions } from "./SessionPermissions";
+import { PrivateConnectSettings } from "./PrivateConnectSettings";
 import { ChevronRightIcon, EllipsisIcon } from "lucide-react";
 import { useAtomValue } from "@effect/atom-react";
 import { useState } from "react";
@@ -1483,6 +1484,7 @@ export function ConnectionsSettings() {
   return (
     <SettingsPageContainer>
       {primarySettings}
+      <PrivateConnectSettings />
       <SettingsSection
         {...searchableSetting("remote-environments")}
         title="Environments"

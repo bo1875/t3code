@@ -43,7 +43,8 @@ import {
   PUBLISH_AGENT_ACTIVITY_SECRET,
   RELAY_URL_SECRET,
 } from "../cloud/config.ts";
-import { relayUrlConfig } from "../cloud/publicConfig.ts";
+import { PrivateConnectError } from "../privateConnect/PrivateConnect.ts";
+import { hasCloudPublicConfig, relayUrlConfig } from "../cloud/publicConfig.ts";
 import * as RelayTracing from "../cloud/relayTracing.ts";
 import * as ServerConfig from "../config.ts";
 import * as ServerEnvironment from "../environment/ServerEnvironment.ts";
@@ -52,6 +53,7 @@ import { readPersistedServerRuntimeState } from "../serverRuntimeState.ts";
 import { projectLocationFlags, resolveCliAuthConfig } from "./config.ts";
 import { resolveCliCommand } from "./invocation.ts";
 import * as CliService from "./service.ts";
+import * as PrivateConnectCli from "../privateConnect/cli.ts";
 
 const jsonFlag = Flag.Boolean("json").pipe(
   Flag.withDescription("Emit JSON instead of human-readable output."),
@@ -620,6 +622,8 @@ const connectLinkCommand = Command.make("link", {
     runCloudCommand(
       flags,
       Effect.gen(function* () {
+        if (!hasCloudPublicConfig)
+          return yield* new PrivateConnectError({ reason: "server-required" });
         yield* Console.log("T3 Connect\n");
         const linked = yield* linkEnvironmentForConnect(flags);
         if (linked) {
@@ -646,6 +650,7 @@ const connectStatusCommand = Command.make("status", {
     runCloudCommand(
       flags,
       Effect.gen(function* () {
+        if (yield* PrivateConnectCli.status(flags.json)) return;
         const secrets = yield* ServerSecretStore.ServerSecretStore;
         const relayClient = yield* RelayClient.RelayClient;
         const tokens = yield* CliTokenManager.CloudCliTokenManager;
@@ -768,7 +773,13 @@ const connectUnlinkCommand = Command.make("unlink", {
 }).pipe(
   Command.withDescription("Disable T3 Connect while retaining the stored authorization."),
   Command.withHandler((flags) =>
-    runCloudCommand(flags, disconnectCloud({ clearAuthorization: false })),
+    runCloudCommand(
+      flags,
+      Effect.gen(function* () {
+        if (!(yield* PrivateConnectCli.unlink))
+          yield* disconnectCloud({ clearAuthorization: false });
+      }),
+    ),
   ),
 );
 
@@ -777,7 +788,13 @@ const connectLogoutCommand = Command.make("logout", {
 }).pipe(
   Command.withDescription("Disable T3 Connect and clear the stored CLI authorization."),
   Command.withHandler((flags) =>
-    runCloudCommand(flags, disconnectCloud({ clearAuthorization: true })),
+    runCloudCommand(
+      flags,
+      Effect.gen(function* () {
+        yield* PrivateConnectCli.unlink;
+        yield* disconnectCloud({ clearAuthorization: true });
+      }),
+    ),
   ),
 );
 
@@ -808,12 +825,29 @@ const reportServiceOnboarding = Effect.fn("cli.connect.report_service_onboarding
 export const connectCommand = Command.make("connect", {
   ...projectLocationFlags,
   headless: headlessFlag,
+  server: Flag.String("server").pipe(
+    Flag.withDescription("Use your own T3 server as the connection directory."),
+    Flag.optional,
+  ),
+  address: Flag.String("address").pipe(
+    Flag.withDescription("This machine's HTTPS address, reachable by the server and browsers."),
+    Flag.optional,
+  ),
 }).pipe(
   Command.withDescription("Set up T3 Connect for this machine."),
   Command.withHandler((flags) =>
     runCloudCommand(
       flags,
       Effect.gen(function* () {
+        if (Option.isSome(flags.server)) {
+          if (Option.isNone(flags.address)) {
+            return yield* new PrivateConnectError({ reason: "address-required" });
+          }
+          yield* PrivateConnectCli.link(flags.server.value, flags.address.value);
+          return;
+        }
+        if (!hasCloudPublicConfig)
+          return yield* new PrivateConnectError({ reason: "server-required" });
         yield* Console.log("T3 Connect\n");
         const linked = yield* linkEnvironmentForConnect(flags);
         if (!linked) {

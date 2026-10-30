@@ -62,6 +62,7 @@ import {
 } from "./desktopLocal";
 import * as ConnectionStorage from "./storage";
 import { clientPresentationMetadata } from "./clientMetadata";
+import { makePrivateConnectDiscovery } from "./privateConnect";
 
 let nextObservedRpcRequestId = 0;
 
@@ -635,6 +636,7 @@ const layerPlatformConnectionSource = Layer.effect(
       });
     }
     const cacheRef = yield* Ref.make(new Map<string, CachedPlatformRegistration>());
+    const discoverPrivateConnections = yield* makePrivateConnectDiscovery;
     const rejectedRef = yield* Ref.make(new Map<string, RejectedSecondaryBootstrap>());
 
     const buildPlatformRegistrations = Effect.gen(function* () {
@@ -788,6 +790,14 @@ const layerPlatformConnectionSource = Layer.effect(
       }
 
       yield* Ref.set(cacheRef, next);
+      registrations.push(
+        ...(yield* discoverPrivateConnections(
+          registrations.find(
+            (registration) => registration._tag === "PrimaryConnectionRegistration",
+          )?.target.environmentId,
+          clientMetadata(),
+        )),
+      );
       return registrations as ReadonlyArray<PlatformConnectionRegistration>;
     }).pipe(Effect.provide(FetchHttpClient.layer));
 

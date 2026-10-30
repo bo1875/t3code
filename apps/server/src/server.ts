@@ -139,6 +139,8 @@ import {
 } from "./cloud/config.ts";
 import * as EnvironmentAuth from "./auth/EnvironmentAuth.ts";
 import * as CloudHttp from "./cloud/http.ts";
+import * as PrivateConnectHttp from "./privateConnect/http.ts";
+import * as PrivateConnect from "./privateConnect/PrivateConnect.ts";
 import * as CloudLink from "./cloud/CloudLink.ts";
 import * as ConnectReachability from "./cloud/ConnectReachability.ts";
 import { pendingServiceUpdateExists } from "./cloud/updateHandoff.ts";
@@ -694,6 +696,7 @@ const layerMakeRoutes = Layer.mergeAll(
       Layer.provide(AuthHttp.layer),
       Layer.provide(McpOAuthHttp.layer.pipe(Layer.provide(McpOAuth.layer))),
       Layer.provide(CloudHttp.layer),
+      Layer.provide(PrivateConnectHttp.layer.pipe(Layer.provide(PrivateConnect.layer))),
       Layer.provide(OrchestrationHttp.layer),
       Layer.provide(PullRequestHttp.layer),
       Layer.provide(ProjectHttp.layer),

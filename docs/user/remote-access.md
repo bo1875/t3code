@@ -5,6 +5,52 @@ machine. That machine must stay running and reachable while you work.
 
 ## T3 Connect
 
+### Private Connect in this fork
+
+Use one of your T3 servers as a shared connection directory. Open that server's
+web address on your computer and iPhone, and pair each browser with it once. The
+directory and its access grants live on your server. No T3 account, Clerk,
+Cloudflare, or hosted database is needed.
+
+On each other machine running this fork, keep T3 running and register its HTTPS
+address:
+
+```sh
+t3 connect --server https://your-directory.example --address https://your-machine.example
+```
+
+The first registration prompts privately for a pairing code from the directory
+server. Create it with `t3 pair` on that server. Use a standard full-access code.
+The registered address must be reachable from both the directory server and your
+browsers, through your LAN, a VPN, or your own HTTPS endpoint. Private Connect
+does not create tunnels or open firewall ports. HTTP loopback addresses are
+accepted only for local testing.
+
+Registered machines appear automatically in the directory server's web interface
+within 30 seconds. Each browser gets its own session on each machine; existing
+browser tokens are not copied between devices. Use **Settings → Connections →
+Private Connect** to see the shared directory and remove a machine for everyone.
+Device-local connection switches remain local.
+
+This is a single-owner directory: clients that can manage access on the directory
+can pair with its registered machines, limited to the permissions they hold on
+the directory and the machine's registration grant. Treat the directory server
+as trusted to grant access to those machines. Registration grants expire after a
+year; run the registration command again before expiry to renew one. `t3 connect
+status` shows the saved private connection, and `t3 connect unlink` revokes its
+registration grant locally even if the directory is offline. Removing a directory
+entry does not revoke already-issued device sessions; revoke those on the machine
+under **Connections → Client sessions**.
+
+Use this fork's server-hosted web app on iPhone. The official hosted app and native
+iOS app do not implement Private Connect. Connections saved in another browser
+are not uploaded automatically; register those machines once with the command
+above. AI-provider traffic still goes to whichever providers you configure.
+
+Build and installation instructions are in [Private Connect deployment](../operations/private-connect.md).
+
+### Hosted T3 Connect
+
 T3 Connect makes an environment available to your other devices without setting
 up router forwarding. In the desktop app on the host, open **Settings →
 Connections**, sign in, and enable **T3 Connect** for that environment.
